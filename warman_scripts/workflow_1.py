@@ -55,7 +55,7 @@ image = image[:,:,2]
 
 # Calculating the h-dome
 image = gaussian_filter(image, 1)
-h = 0.4 # Have tried various values for h, 0.4 worked the best for me
+h = 0.5 # Have tried various values for h, 0.5 worked the best for me
 seed = image - h
 mask = image
 dilated = reconstruction(seed, mask, method='dilation')
@@ -80,6 +80,11 @@ hdome = img_as_ubyte(hdome) # Converting the float64 output to uint8
 
 # For testing:
 # hist = np.histogram(image, bins=np.arange(0, 256))
+# fig, axes = plt.subplots(1, 2, figsize=(8, 3))
+# axes[0].imshow(hdome, cmap=plt.cm.gray, interpolation='nearest')
+# axes[0].axis('off')
+# axes[1].plot(hist[1][:-1], hist[0], lw=2)
+# axes[1].set_title('histogram of gray values')
 
 # After converting the output to uint8, the histogram is still heavily skewed 
 # to the left. Rescaling the intenity of the image slightly fixes the skew.
@@ -91,8 +96,8 @@ elevation_map = sobel(hdome)
 # Next we find markers of the background and the coins based on the extreme
 # parts of the histogram of gray values.
 markers = np.zeros_like(hdome)
-markers[hdome < 25] = 1 # Tried a wide range for these values, will probably 
-markers[hdome > 60] = 2 # vary based on the image
+markers[hdome < 20] = 1 # Tried a wide range for these values, will probably 
+markers[hdome > 80] = 2 # vary based on the image
 
 # We use the watershed transform to fill regions of the elevation map starting 
 # from the markers determined above:
