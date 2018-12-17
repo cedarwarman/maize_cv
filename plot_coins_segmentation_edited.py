@@ -10,21 +10,29 @@ against a darker background.
 
 import numpy as np
 import matplotlib.pyplot as plt
-
 from skimage import data
-from skimage import io # Added so I can import my own images
+from skimage import io
+from skimage import img_as_ubyte
+from skimage import exposure
 from skimage.color import rgb2gray
 
-
+# Loading my image, which is output from the plot_regional_maxima tutorial
 image = io.imread('/Users/CiderBones/Desktop/Laboratory/computer_vision/scikit-image/plot_regional_maxima_output.png')
-print(image.ndim)
-image = rgb2gray(image)
-print(image.ndim)
-coins = image
-hist = np.histogram(coins, bins=np.arange(0, 256))
+# print(image.ndim)
+# print(image.dtype)
+image = rgb2gray(image) # Converting the image to grayscale
+# print(image.ndim)
+# print(image.dtype)
+image = img_as_ubyte(image) # Converting the float64 image to uint8
+# print(image.dtype)
+# After converting the image to uint8, the histogram is still heavily skewed to the left.
+# Rescaling the intenity of the image slightly fixes the skew.
+image = exposure.rescale_intensity(image)
+
+hist = np.histogram(image, bins=np.arange(0, 256))
 
 fig, axes = plt.subplots(1, 2, figsize=(8, 3))
-axes[0].imshow(coins, cmap="gray", interpolation='nearest')
+axes[0].imshow(image, cmap="gray", interpolation='nearest')
 axes[0].axis('off')
 axes[1].plot(hist[1][:-1], hist[0], lw=2)
 axes[1].set_title('histogram of gray values')
@@ -41,11 +49,11 @@ axes[1].set_title('histogram of gray values')
 
 fig, axes = plt.subplots(1, 2, figsize=(8, 3), sharey=True)
 
-axes[0].imshow(coins > 100, cmap=plt.cm.gray, interpolation='nearest')
-axes[0].set_title('coins > 100')
+axes[0].imshow(image > 100, cmap=plt.cm.gray, interpolation='nearest')
+axes[0].set_title('image > 100')
 
-axes[1].imshow(coins > 150, cmap=plt.cm.gray, interpolation='nearest')
-axes[1].set_title('coins > 150')
+axes[1].imshow(image > 150, cmap=plt.cm.gray, interpolation='nearest')
+axes[1].set_title('image > 150')
 
 for a in axes:
     a.axis('off')
@@ -62,7 +70,7 @@ plt.tight_layout()
 
 from skimage.feature import canny
 
-edges = canny(coins)
+edges = canny(image)
 
 fig, ax = plt.subplots(figsize=(4, 3))
 ax.imshow(edges, cmap=plt.cm.gray, interpolation='nearest')
@@ -74,10 +82,10 @@ ax.axis('off')
 
 from scipy import ndimage as ndi
 
-fill_coins = ndi.binary_fill_holes(edges)
+fill_image = ndi.binary_fill_holes(edges)
 
 fig, ax = plt.subplots(figsize=(4, 3))
-ax.imshow(fill_coins, cmap=plt.cm.gray, interpolation='nearest')
+ax.imshow(fill_image, cmap=plt.cm.gray, interpolation='nearest')
 ax.set_title('filling the holes')
 ax.axis('off')
 
@@ -88,10 +96,10 @@ ax.axis('off')
 
 from skimage import morphology
 
-coins_cleaned = morphology.remove_small_objects(fill_coins, 21)
+image_cleaned = morphology.remove_small_objects(fill_image, 21)
 
 fig, ax = plt.subplots(figsize=(4, 3))
-ax.imshow(coins_cleaned, cmap=plt.cm.gray, interpolation='nearest')
+ax.imshow(image_cleaned, cmap=plt.cm.gray, interpolation='nearest')
 ax.set_title('removing small objects')
 ax.axis('off')
 
@@ -108,7 +116,7 @@ ax.axis('off')
 
 from skimage.filters import sobel
 
-elevation_map = sobel(coins)
+elevation_map = sobel(image)
 
 fig, ax = plt.subplots(figsize=(4, 3))
 ax.imshow(elevation_map, cmap=plt.cm.gray, interpolation='nearest')
@@ -119,9 +127,9 @@ ax.axis('off')
 # Next we find markers of the background and the coins based on the extreme
 # parts of the histogram of gray values.
 
-markers = np.zeros_like(coins)
-markers[coins < 30] = 1
-markers[coins > 150] = 2
+markers = np.zeros_like(image)
+markers[image < 30] = 1
+markers[image > 150] = 2
 
 fig, ax = plt.subplots(figsize=(4, 3))
 ax.imshow(markers, cmap=plt.cm.nipy_spectral, interpolation='nearest')
@@ -146,11 +154,11 @@ ax.axis('off')
 from skimage.color import label2rgb
 
 segmentation = ndi.binary_fill_holes(segmentation - 1)
-labeled_coins, _ = ndi.label(segmentation)
-image_label_overlay = label2rgb(labeled_coins, image=coins)
+labeled_image, _ = ndi.label(segmentation)
+image_label_overlay = label2rgb(labeled_image, image=image)
 
 fig, axes = plt.subplots(1, 2, figsize=(8, 3), sharey=True)
-axes[0].imshow(coins, cmap=plt.cm.gray, interpolation='nearest')
+axes[0].imshow(image, cmap=plt.cm.gray, interpolation='nearest')
 axes[0].contour(segmentation, [0.5], linewidths=1.2, colors='y')
 axes[1].imshow(image_label_overlay, interpolation='nearest')
 

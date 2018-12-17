@@ -16,6 +16,7 @@ from skimage import data
 coins = data.coins()
 print(type(coins))
 print(coins.ndim)
+print(coins.dtype)
 hist = np.histogram(coins, bins=np.arange(0, 256))
 
 fig, axes = plt.subplots(1, 2, figsize=(8, 3))
