@@ -128,8 +128,8 @@ ax.axis('off')
 # parts of the histogram of gray values.
 
 markers = np.zeros_like(image)
-markers[image < 30] = 1
-markers[image > 150] = 2
+markers[image < 25] = 1
+markers[image > 60] = 2
 
 fig, ax = plt.subplots(figsize=(4, 3))
 ax.imshow(markers, cmap=plt.cm.nipy_spectral, interpolation='nearest')

@@ -99,7 +99,7 @@ ax2.set_title('image - dilated')
 ax2.axis('off')
 
 fig.tight_layout()
-#plt.show()
+plt.show()
 
 ######################################################################
 # As you can see in the image slice, each coin is given a different baseline
@@ -111,4 +111,4 @@ fig.tight_layout()
 # unevenly illuminated.
 
 
-io.imsave("/Users/CiderBones/Desktop/scikit_output_test.png", hdome)
+#io.imsave("/Users/CiderBones/Desktop/scikit_output_test.png", hdome)
