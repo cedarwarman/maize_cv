@@ -1,7 +1,7 @@
 """
-=============================================
+============================================
 Regional maxima to region based segmentation
-=============================================
+============================================
 
 This script combines elements from the scikit-image plot_regional_maxima.py 
 and plot_coins_segmentation.py scripts. I've also extracted only the blue 
@@ -23,6 +23,26 @@ from skimage.color import label2rgb
 from skimage.color import rgb2gray
 from skimage.morphology import reconstruction
 from skimage.filters import sobel
+
+"""
+=======================
+Defining some functions
+=======================
+"""
+
+# Crops the right and left sides of an image based on the argument "percent" (0-0.5)
+def crop_edges(input_image, percent):
+	image = input_image
+
+	crop_column_width = image.shape[1]
+
+	left_crop_column = int(round(percent * crop_column_width))
+	right_crop_column =  int(round(crop_column_width - (percent * crop_column_width)))
+
+	cropped_image = image[:, left_crop_column:right_crop_column]
+
+	return cropped_image
+
 
 """
 =========================
@@ -52,6 +72,20 @@ image = img_as_float(image)
 # the brightness in this channel.
 image = image[:,:,2]
 
+# Cropping 15% off each side of the image
+image = crop_edges(image, 0.15)
+
+# -----------------------------------------------------------------------------
+# # For testing (sets other channels to zero instead of extracting channel):
+# image[:,:,0] = 0
+# image[:,:,2] = 0
+# io.imsave("/Users/CiderBones/Desktop/image_green.png", image)
+# 
+# # Testing the image cropping
+# print(image.shape)
+# image_cropped = crop_edges(image, 0.15)
+# print(image_cropped.shape)
+# -----------------------------------------------------------------------------
 
 # Calculating the h-dome
 image = gaussian_filter(image, 1)
@@ -61,14 +95,16 @@ mask = image
 dilated = reconstruction(seed, mask, method='dilation')
 hdome = image - dilated
 
-# Saving the image (only necessary for testing)
-#io.imsave("/Users/CiderBones/Desktop/scikit_output_test_new_nogauss.png", hdome)
+# -----------------------------------------------------------------------------
+# # Saving the image (only necessary for testing)
+# io.imsave("/Users/CiderBones/Desktop/scikit_output_test_new_nogauss.png", hdome)
+# -----------------------------------------------------------------------------
 
 
 """
-==================================================
+=========================
 Region-based segmentation
-==================================================
+=========================
 
 (From the tutorial)
 Here we segment objects from a background using the watershed transform.
@@ -78,6 +114,7 @@ Here we segment objects from a background using the watershed transform.
 hdome = rgb2gray(hdome) # Converting the output to grayscale
 hdome = img_as_ubyte(hdome) # Converting the float64 output to uint8
 
+# -----------------------------------------------------------------------------
 # For testing:
 # hist = np.histogram(image, bins=np.arange(0, 256))
 # fig, axes = plt.subplots(1, 2, figsize=(8, 3))
@@ -85,6 +122,7 @@ hdome = img_as_ubyte(hdome) # Converting the float64 output to uint8
 # axes[0].axis('off')
 # axes[1].plot(hist[1][:-1], hist[0], lw=2)
 # axes[1].set_title('histogram of gray values')
+# -----------------------------------------------------------------------------
 
 # After converting the output to uint8, the histogram is still heavily skewed 
 # to the left. Rescaling the intenity of the image slightly fixes the skew.
@@ -108,6 +146,18 @@ segmentation = morphology.watershed(elevation_map, markers)
 segmentation = ndi.binary_fill_holes(segmentation - 1)
 labeled_image, _ = ndi.label(segmentation)
 image_label_overlay = label2rgb(labeled_image, image=hdome)
+
+# -----------------------------------------------------------------------------
+# # Printing the image array contents, for testing
+# for x in labeled_image : print(*x, sep=" ")
+
+# # Another way to do this, but needs some work
+# rows = labeled_image.shape[0] 
+# cols = labeled_image.shape[1]
+# for x in range(0, rows): 
+#  	for y in range(0, cols): 
+#  		print(labeled_image[x,y])
+# -----------------------------------------------------------------------------
 
 # Plotting
 fig, axes = plt.subplots(1, 2, figsize=(8, 3), sharey=True)
