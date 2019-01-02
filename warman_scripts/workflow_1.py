@@ -171,8 +171,19 @@ image_label_overlay = label2rgb(labeled_image, image=hdome)
 #  		print(labeled_image[x,y])
 #
 # # Testing the center finding function
-# centers = find_centers(labeled_image)
-# print(*centers, sep = '\n')
+centers = find_centers(labeled_image)
+print(*centers, sep = '\n')
+
+# Printing the centers overlayed on the image
+centers_y, centers_x = zip(*centers)
+plt.imshow(image_label_overlay, interpolation='nearest')
+plt.scatter(centers_x, centers_y, color="black", marker="+")
+plt.show()
+# # Note: this way should work, but the axis are flipped for some reason. I 
+# # think there's some inconsistency in how im.show plots the x and y and how 
+# # they're arranged in the array.
+# # plt.scatter(*zip(*centers))
+# # plt.show()
 # -----------------------------------------------------------------------------
 
 # Plotting
@@ -187,6 +198,7 @@ for a in axes:
 plt.tight_layout()
 
 # plt.show()
+
 
 
 
