@@ -43,6 +43,18 @@ def crop_edges(input_image, percent):
 
 	return cropped_image
 
+# Finds the centers of each object in the segmentation mask
+def find_centers(input_array):
+	array = input_array
+
+# I think it's converting the first 'array' to just 0 or 1, then takes the 
+# index from the second 'array.' Supposedly if the third argument is not 
+# supplied then it will use all labels greater than zero, but it's not doing 
+# that for me, so here I pull out a list of all the labels to use as the index.
+	centers = ndi.center_of_mass(array, array, list(range(1, array.max() + 1)))
+
+	return centers
+
 
 """
 =========================
@@ -150,13 +162,17 @@ image_label_overlay = label2rgb(labeled_image, image=hdome)
 # -----------------------------------------------------------------------------
 # # Printing the image array contents, for testing
 # for x in labeled_image : print(*x, sep=" ")
-
+#
 # # Another way to do this, but needs some work
 # rows = labeled_image.shape[0] 
 # cols = labeled_image.shape[1]
 # for x in range(0, rows): 
 #  	for y in range(0, cols): 
 #  		print(labeled_image[x,y])
+#
+# # Testing the center finding function
+# centers = find_centers(labeled_image)
+# print(*centers, sep = '\n')
 # -----------------------------------------------------------------------------
 
 # Plotting
@@ -170,7 +186,7 @@ for a in axes:
 
 plt.tight_layout()
 
-plt.show()
+# plt.show()
 
 
 
