@@ -19,6 +19,7 @@ from skimage import io # Added so I can import my own images
 from skimage import morphology
 from skimage import img_as_ubyte
 from skimage import exposure
+from skimage.measure import regionprops
 from skimage.color import label2rgb
 from skimage.color import rgb2gray
 from skimage.morphology import reconstruction
@@ -43,6 +44,7 @@ def crop_edges(input_image, percent):
 
 	return cropped_image
 
+
 # Finds the centers of each object in the segmentation mask
 def find_centers(input_array):
 	array = input_array
@@ -55,6 +57,20 @@ def find_centers(input_array):
 
 	return centers
 
+
+# Gets the mean green channel intensity from each object in a mask
+def mean_intensity(input_image, input_mask):
+	image = crop_edges(
+		input_image, 0.15)
+	image = image[:,:,1]
+	mask = input_mask
+	output_intensity_list = list()
+
+	for object_num in range(1, (np.max(mask) + 1)):
+		mean_intensity = np.mean(image[mask == object_num])
+		output_intensity_list.append(mean_intensity)
+
+	return output_intensity_list
 
 """
 =========================
@@ -77,8 +93,8 @@ when your images are unevenly illuminated.
 
 # Importing maize image and converting to float. Important for subtraction 
 # later, which won't work with uint8
-image = io.imread('/Users/CiderBones/Desktop/Laboratory/computer_vision/scikit-image/X402x498-2m1.png')
-image = img_as_float(image)
+raw_image = io.imread('/Users/CiderBones/Desktop/Laboratory/computer_vision/scikit-image/X402x498-2m1.png')
+image = img_as_float(raw_image)
 
 # Extracting only the blue channel from the image. There's less variation in 
 # the brightness in this channel.
@@ -163,27 +179,36 @@ image_label_overlay = label2rgb(labeled_image, image=hdome)
 # # Printing the image array contents, for testing
 # for x in labeled_image : print(*x, sep=" ")
 #
-# # Another way to do this, but needs some work
-# rows = labeled_image.shape[0] 
-# cols = labeled_image.shape[1]
-# for x in range(0, rows): 
-#  	for y in range(0, cols): 
-#  		print(labeled_image[x,y])
-#
+# 
 # # Testing the center finding function
-centers = find_centers(labeled_image)
-print(*centers, sep = '\n')
+# centers = find_centers(labeled_image)
+# print(*centers, sep = '\n')
 
-# Printing the centers overlayed on the image
-centers_y, centers_x = zip(*centers)
-plt.imshow(image_label_overlay, interpolation='nearest')
-plt.scatter(centers_x, centers_y, color="black", marker="+")
-plt.show()
+# # Plotting the centers overlayed on the segmented image
+# centers_y, centers_x = zip(*centers)
+# plt.imshow(image_label_overlay, interpolation='nearest')
+# plt.scatter(centers_x, centers_y, color="black", marker="+")
+# plt.show()
+
+# # Plotting the centers overlayed on the original image
+# plot_image = crop_edges(raw_image, 0.15)
+# plt.imshow(plot_image)
+# plt.scatter(centers_x, centers_y, color="black", marker="+")
+# plt.show()
+
 # # Note: this way should work, but the axis are flipped for some reason. I 
 # # think there's some inconsistency in how im.show plots the x and y and how 
 # # they're arranged in the array.
 # # plt.scatter(*zip(*centers))
 # # plt.show()
+
+# Testing th mean intensity function
+mean_intensity_return = mean_intensity(raw_image, labeled_image)
+# print(*mean_intensity_return, sep = '\n')
+plt.hist(mean_intensity_return, bins = 30)
+plt.xlabel('mean pixel intensity')
+plt.ylabel('count')
+plt.show()
 # -----------------------------------------------------------------------------
 
 # Plotting
