@@ -29,6 +29,7 @@ from skimage.color import label2rgb
 from skimage.color import rgb2gray
 from skimage.morphology import reconstruction
 from skimage.filters import sobel
+from sklearn.cluster import KMeans
 
 
 """
@@ -213,9 +214,74 @@ def mean_intensity(input_image, input_mask):
 		output_green_intensity.append(green_mean_intensity)
 		output_blue_intensity.append(blue_mean_intensity)
 
-	return {'red':output_red_intensity, 
-	        'green':output_green_intensity,
-	        'blue':output_blue_intensity}
+	rgb_intensity = np.column_stack((output_red_intensity,
+									 output_green_intensity, 
+									 output_blue_intensity))
+
+	return rgb_intensity
+
+
+"""
+==========================
+Calculate k-means function
+==========================
+
+Performs k-means clustering with two clusters on rgb intensity values (output 
+from Get mean intensity function). Just a wrapper for sklearn Kmeans.
+"""
+
+def kmeans_from_rgb(rgb_input):
+	rgb = rgb_input
+	kmeans = KMeans(n_clusters=2).fit(rgb)
+
+	return kmeans
+
+
+"""
+============================
+Which is more green function
+============================
+
+K-means clustering does a good job of separating the rgb intensity values into 
+two groups, but the group labels depend on the random starting positions of 
+the two clusters. For labeling the image, I want to know which cluster is the 
+green fluorescent kernels and which cluster is the rest. This function takes 
+the Calculate k-means fuction output as its input. It returns the k-means with
+kmeans.labels_ formatted like this:
+
+0 = green
+1 = not green
+"""
+
+def which_is_more_green(rgb_input, kmeans_input):
+	kmeans = kmeans_input
+
+	# Calculating the mean green intensity of all the values in each label
+	all_green_intensity = rgb_input[:,1]
+
+	label_0_green_mean = np.mean(all_green_intensity[[not i for i in kmeans_input.labels_]])
+	label_1_green_mean = np.mean(all_green_intensity[kmeans_input.labels_])
+
+	# Since 0 is green, if 0 is already set to green then no problem. 
+	# Otherwise it will flip the values in kmeans.labels_.
+	if label_0_green_mean < label_1_green_mean:
+		labels = kmeans.labels_
+
+		# This isn't pretty, but I couldn't figure out a better way
+		labels[labels == 0] = 3
+		labels[labels == 1] = 0
+		labels[labels == 3] = 1
+
+		# Replacing the original labels with the new ones
+		kmeans.labels_ = labels
+
+	return(kmeans)
+
+
+
+
+
+
 
 
 """
@@ -255,30 +321,92 @@ plt.show()
 # -----------------------------------------------------------------------------
 """
 
-# Getting the mean intensity for all channels
-mean_intensity = mean_intensity(image, image_segments)
-red_intensity = mean_intensity['red']
-green_intensity = mean_intensity['green']
-blue_intensity = mean_intensity['blue']
+# Getting the mean rgb intensity
+rgb_intensity = mean_intensity(image, image_segments)
 
-
+"""
 # -----------------------------------------------------------------------------
 # Printing the image array contents, for testing
 # for x in labeled_image : print(*x, sep=" ")
 
 # Plotting histograms of the mean intensity values
-plt.hist(red_intensity, bins = 30)
+plt.hist(rgb_intensity[:, 0], bins = 30)
 plt.xlabel('red mean pixel intensity')
 plt.ylabel('count')
 plt.show()
 
-plt.hist(green_intensity, bins = 30)
+plt.hist(rgb_intensity[:, 1], bins = 30)
 plt.xlabel('green mean pixel intensity')
 plt.ylabel('count')
 plt.show()
 
-plt.hist(blue_intensity, bins = 30)
+plt.hist(rgb_intensity[:, 2], bins = 30)
 plt.xlabel('blue mean pixel intensity')
 plt.ylabel('count')
 plt.show()
 # -----------------------------------------------------------------------------
+"""
+
+# K-means clustering of RGB intensity values (should split segments into 
+# fluorescent and non-fluorescent groups)
+kmeans = kmeans_from_rgb(rgb_intensity)
+
+"""
+# -----------------------------------------------------------------------------
+# Plotting k-means clustering
+# Adapted from scikit-learn.org/stable/auto_examples/cluster/plot_cluster_iris.html
+
+from mpl_toolkits.mplot3d import Axes3D
+
+fig = plt.figure()
+ax = Axes3D(fig, rect=[0, 0, .95, 1], elev=48, azim=134)
+labels = kmeans.labels_
+ax.scatter(rgb_intensity[:, 0], rgb_intensity[:, 1], rgb_intensity[:, 2],
+		   c=labels.astype(np.float), edgecolor='k')
+
+ax.w_xaxis.set_ticklabels([])
+ax.w_yaxis.set_ticklabels([])
+ax.w_zaxis.set_ticklabels([])
+ax.set_xlabel('red')
+ax.set_ylabel('green')
+ax.set_zlabel('blue')
+ax.dist = 12
+
+plt.show()
+# -----------------------------------------------------------------------------
+"""
+
+# This makes sure that the fluorescent cluster is labeled consistently
+kmeans = which_is_more_green(rgb_intensity, kmeans)
+
+# Plotting the original image with the k-means clustering results
+centers_y, centers_x = zip(*segment_centers)
+centers_y = np.asarray(centers_y)
+centers_x = np.asarray(centers_x)
+labels = kmeans.labels_
+plot_data = np.column_stack((centers_x, centers_y, labels))
+
+plot_points_fluor = plot_data[plot_data[:,2] == 0]
+plot_points_none_fluor = plot_data[plot_data[:,2] == 1]
+
+plt.imshow(image)
+plt.scatter(plot_points_fluor[:,0], plot_points_fluor[:,1], marker="+", c="darkolivegreen")
+plt.scatter(plot_points_none_fluor[:,0], plot_points_none_fluor[:,1], marker="+", c="white")
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
