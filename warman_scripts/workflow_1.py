@@ -5,10 +5,12 @@ Regional maxima to region based segmentation
 ============================================
 ============================================
 
-This script combines elements from the scikit-image plot_regional_maxima.py 
-and plot_coins_segmentation.py scripts. I've also extracted only the blue 
-channel from the original image. The blue channel contains less contrast 
-(coming from the green channel mostly), making the segmentation more accurate.
+This script attempts to segment individual kernels from a scanned maize ear 
+and group kernels by fluorescence. Output will be location and fluorescence 
+category for each kernel. The script uses image processing functions from 
+sci-kit image, as well as k-means clustering for fluorescence grouping from 
+sci-kit learn. Several plots can be displayed by unquoting triple-quoted 
+blocks.
 """
 
 import sys
@@ -18,9 +20,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from scipy import ndimage as ndi
-from scipy.ndimage import gaussian_filter # Will this conflict with prev. line?
+from scipy.ndimage import gaussian_filter
 from skimage import img_as_float
-from skimage import io # Added so I can import my own images
+from skimage import io
 from skimage import morphology
 from skimage import img_as_ubyte
 from skimage import exposure
@@ -276,11 +278,6 @@ def which_is_more_green(rgb_input, kmeans_input):
 		kmeans.labels_ = labels
 
 	return(kmeans)
-
-
-
-
-
 
 
 
