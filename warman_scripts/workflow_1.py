@@ -30,6 +30,8 @@ from skimage.measure import regionprops
 from skimage.color import label2rgb
 from skimage.color import rgb2gray
 from skimage.morphology import reconstruction
+from skimage.morphology import binary_opening
+from skimage.morphology import disk
 from skimage.filters import sobel
 from sklearn.cluster import KMeans
 
@@ -157,6 +159,13 @@ def region_based_segmentation(hdome, marker_low, marker_high):
 
 	# Filling the holes in the segments, labeling them, and making a pretty overlay.
 	segmentation = ndi.binary_fill_holes(segmentation - 1)
+
+	# Doing a morphological opening to get rid of some of the bridges between 
+	# segments. I need to add a function that only does this on segments that 
+	# are a certain dimension, aka sig. longer than they are tall. If I do 
+	# this too aggressively, the smaller segments get removed.
+	segmentation = binary_opening(segmentation, selem=disk(5))
+
 	labeled_image, _ = ndi.label(segmentation)
 	image_label_overlay = label2rgb(labeled_image, image=hdome)
 
@@ -314,7 +323,7 @@ plt.show()
 centers_y, centers_x = zip(*segment_centers)
 plt.imshow(image)
 plt.scatter(centers_x, centers_y, color="black", marker="+")
-plt.show()
+# plt.show()
 # -----------------------------------------------------------------------------
 """
 
@@ -387,7 +396,7 @@ plot_points_fluor = plot_data[plot_data[:,2] == 0]
 plot_points_none_fluor = plot_data[plot_data[:,2] == 1]
 
 plt.imshow(image)
-plt.scatter(plot_points_fluor[:,0], plot_points_fluor[:,1], marker="+", c="darkolivegreen")
+plt.scatter(plot_points_fluor[:,0], plot_points_fluor[:,1], marker="+", c="springgreen")
 plt.scatter(plot_points_none_fluor[:,0], plot_points_none_fluor[:,1], marker="+", c="white")
 plt.show()
 
