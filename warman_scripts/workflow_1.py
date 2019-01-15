@@ -15,6 +15,7 @@ blocks.
 
 import sys
 import os.path
+import argparse
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -34,6 +35,22 @@ from skimage.morphology import binary_opening
 from skimage.morphology import disk
 from skimage.filters import sobel
 from sklearn.cluster import KMeans
+
+"""
+========================
+Setting up the arguments
+========================
+"""
+
+parser = argparse.ArgumentParser(description='Given maize ear scans, count the kernels and separate by color.')
+
+parser.add_argument('-i', '--input_image_path', type=str, help='Path of input image. Should be a .png.')
+parser.add_argument('-p', '--image_crop_percentage', type=float, default=0.15, help='Percent width of image to crop from each side. Between 0 and 0.5.')
+parser.add_argument('-d', '--h_dome_value', type=float, default=0.3, help='Isolate regional maxima with height h. Between 0 and 1.')
+parser.add_argument('-wl', '--watershed_low', type=int, default=20, help='Low cutoff for the watershed transform markers (see --watershed_high).')
+parser.add_argument('-wh', '--watershed_high', type=int, default=80, help='High cutoff for the watershed transform markers (see --watershed_low).')
+
+args = parser.parse_args()
 
 
 """
@@ -296,22 +313,23 @@ Putting it all together
 =======================
 """
 
-# Importing and cropping the image
-raw_image = io.imread(os.path.join(sys.path[0], 'X402x498-2m1.png'))
-image = crop_edges(raw_image, 0.15)
+# Importing and cropping the image (older version below)
+# raw_image = io.imread(os.path.join(sys.path[0], 'X402x498-2m1.png'))
+raw_image = io.imread(args.input_image_path)
+image = crop_edges(raw_image, args.image_crop_percentage)
 
 # Getting the regional maxima
-hdome = filter_regional_maxima(image, 0.5)
+hdome = filter_regional_maxima(image, args.h_dome_value)
 
 # Doing the segmentation
-segmentation_output = region_based_segmentation(hdome, 20, 80)
+segmentation_output = region_based_segmentation(hdome, args.watershed_low, args.watershed_high)
 image_segments = segmentation_output['labeled_image']
 image_overlay = segmentation_output['image_label_overlay']
 
 # Finding the centers of the segments
 segment_centers = find_centers(image_segments)
 
-"""
+
 # -----------------------------------------------------------------------------
 # Plotting the centers overlayed on the segmented image
 centers_y, centers_x = zip(*segment_centers)
@@ -320,12 +338,12 @@ plt.scatter(centers_x, centers_y, color="black", marker="+")
 plt.show()
 
 # Plotting the centers overlayed on the original image
-centers_y, centers_x = zip(*segment_centers)
-plt.imshow(image)
-plt.scatter(centers_x, centers_y, color="black", marker="+")
-# plt.show()
+# centers_y, centers_x = zip(*segment_centers)
+# plt.imshow(image)
+# plt.scatter(centers_x, centers_y, color="black", marker="+")
+# # plt.show()
 # -----------------------------------------------------------------------------
-"""
+
 
 # Getting the mean rgb intensity
 rgb_intensity = mean_intensity(image, image_segments)
@@ -396,8 +414,8 @@ plot_points_fluor = plot_data[plot_data[:,2] == 0]
 plot_points_none_fluor = plot_data[plot_data[:,2] == 1]
 
 plt.imshow(image)
-plt.scatter(plot_points_fluor[:,0], plot_points_fluor[:,1], marker="+", c="springgreen")
-plt.scatter(plot_points_none_fluor[:,0], plot_points_none_fluor[:,1], marker="+", c="white")
+plt.scatter(plot_points_fluor[:,0], plot_points_fluor[:,1], marker="+", c="red")
+plt.scatter(plot_points_none_fluor[:,0], plot_points_none_fluor[:,1], marker="+", c="blue")
 plt.show()
 
 
