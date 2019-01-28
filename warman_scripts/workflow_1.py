@@ -61,8 +61,9 @@ Crop edges function
 Crops the right and left sides of an image based on the argument "percent" (0-0.5)
 """
 
-def crop_edges(input_image, percent):
+def crop_edges(input_image, input_percent):
 	image = input_image
+	percent = input_percent
 
 	crop_column_width = image.shape[1]
 
@@ -142,7 +143,9 @@ marker_low = 20
 marker_high = 80
 """
 
-def region_based_segmentation(hdome, marker_low, marker_high):
+def region_based_segmentation(input_hdome, marker_low, marker_high):
+	hdome = input_hdome
+
 	# Adjusting the output from filtering regional maxima
 	hdome = rgb2gray(hdome) # Converting the output to grayscale
 	hdome = img_as_ubyte(hdome) # Converting the float64 output to uint8
@@ -184,10 +187,29 @@ def region_based_segmentation(hdome, marker_low, marker_high):
 	segmentation = binary_opening(segmentation, selem=disk(5))
 
 	labeled_image, _ = ndi.label(segmentation)
-	image_label_overlay = label2rgb(labeled_image, image=hdome)
 
-	return {'labeled_image':labeled_image,
-	        'image_label_overlay':image_label_overlay}
+	return labeled_image
+
+
+"""
+===================================================
+Remove segments that touch the bottom edge function
+===================================================
+
+In order to avoid double counting kernels that are half on the top of the 
+image and half on the bottom of the image, this function removes any segments 
+that touch the bottom edge of the image. Input is the labeled_image mask 
+from region_based_segmentation.
+"""
+
+def remove_bottom_edge(labeled_image_mask):
+	mask = labeled_image_mask
+
+	for object_num in range(1, (np.max(mask) + 1)):
+		if object_num in mask[(mask.shape[0] - 1),:]:
+			mask[mask == object_num] = 0
+
+	return mask
 
 
 """
@@ -208,7 +230,11 @@ def find_centers(input_array):
 	# that for me, so here I pull out a list of all the labels to use as the index.
 	centers = ndi.center_of_mass(array, array, list(range(1, array.max() + 1)))
 
-	return centers
+	# Removes entries in the list that contain NaN (comes from segments getting 
+	# deleted in remove_bottom_edge).
+	centers_no_nan = [x for x in centers if str(x[0]) != 'nan']
+
+	return centers_no_nan
 
 
 """
@@ -234,13 +260,14 @@ def mean_intensity(input_image, input_mask):
 	output_blue_intensity = list()
 
 	for object_num in range(1, (np.max(mask) + 1)):
-		red_mean_intensity = np.mean(red_image[mask == object_num])
-		green_mean_intensity = np.mean(green_image[mask == object_num])
-		blue_mean_intensity = np.mean(blue_image[mask == object_num])
+		if object_num in mask:
+			red_mean_intensity = np.mean(red_image[mask == object_num])
+			green_mean_intensity = np.mean(green_image[mask == object_num])
+			blue_mean_intensity = np.mean(blue_image[mask == object_num])
 
-		output_red_intensity.append(red_mean_intensity)
-		output_green_intensity.append(green_mean_intensity)
-		output_blue_intensity.append(blue_mean_intensity)
+			output_red_intensity.append(red_mean_intensity)
+			output_green_intensity.append(green_mean_intensity)
+			output_blue_intensity.append(blue_mean_intensity)
 
 	rgb_intensity = np.column_stack((output_red_intensity,
 									 output_green_intensity, 
@@ -322,9 +349,13 @@ image = crop_edges(raw_image, args.image_crop_percentage)
 hdome = filter_regional_maxima(image, args.h_dome_value)
 
 # Doing the segmentation
-segmentation_output = region_based_segmentation(hdome, args.watershed_low, args.watershed_high)
-image_segments = segmentation_output['labeled_image']
-image_overlay = segmentation_output['image_label_overlay']
+image_segments = region_based_segmentation(hdome, args.watershed_low, args.watershed_high)
+
+# Removing segments that touch bottom edge to avoid double counting (ERROR LATER IN RGB_INTENSITY, BECAUSE YOU REMOVED INTEGERS FROM THE LOOPS)
+image_segments = remove_bottom_edge(image_segments)
+
+# Making a pretty color overlay for visualization
+image_overlay = label2rgb(image_segments, image=image, alpha=0.5)
 
 # Finding the centers of the segments
 segment_centers = find_centers(image_segments)
@@ -332,10 +363,10 @@ segment_centers = find_centers(image_segments)
 
 # -----------------------------------------------------------------------------
 # Plotting the centers overlayed on the segmented image
-centers_y, centers_x = zip(*segment_centers)
-plt.imshow(image_overlay, interpolation='nearest')
-plt.scatter(centers_x, centers_y, color="black", marker="+")
-plt.show()
+# centers_y, centers_x = zip(*segment_centers)
+# plt.imshow(image_overlay, interpolation='nearest')
+# plt.scatter(centers_x, centers_y, color="black", marker="+")
+# plt.show()
 
 # Plotting the centers overlayed on the original image
 # centers_y, centers_x = zip(*segment_centers)
@@ -343,7 +374,6 @@ plt.show()
 # plt.scatter(centers_x, centers_y, color="black", marker="+")
 # # plt.show()
 # -----------------------------------------------------------------------------
-
 
 # Getting the mean rgb intensity
 rgb_intensity = mean_intensity(image, image_segments)
@@ -417,7 +447,6 @@ plt.imshow(image)
 plt.scatter(plot_points_fluor[:,0], plot_points_fluor[:,1], marker="+", c="red")
 plt.scatter(plot_points_none_fluor[:,0], plot_points_none_fluor[:,1], marker="+", c="blue")
 plt.show()
-
 
 
 
