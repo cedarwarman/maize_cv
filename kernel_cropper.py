@@ -156,8 +156,6 @@ def command_builder (input_coordinates, input_box_size):
 
 		output_string_list.append(coord_string)
 
-		print(coord_string)
-
 	# Doing the same thing for the non-fluorescent kernels.
 	for index, coord in enumerate(nonfluor):
 		x = int(coord[0])
@@ -185,8 +183,6 @@ def command_builder (input_coordinates, input_box_size):
 		#################################################
 
 		output_string_list.append(coord_string)
-
-		print(coord_string)
 
 	return(output_string_list)
 
